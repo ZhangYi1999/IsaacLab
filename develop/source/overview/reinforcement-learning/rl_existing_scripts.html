@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
     <link rel="stylesheet" type="text/css" href="../../../_static/twemoji.css" />
-    <link rel="stylesheet" type="text/css" href="/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=5774970f" />
@@ -49,7 +49,7 @@
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
     <script src="../../../_static/twemoji.js"></script>
-    <script src="/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
@@ -708,6 +708,7 @@
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#newton-backend">Newton Backend</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-mode-presets">Observation-mode Presets</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rl-games">RL-Games</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rsl-rl">RSL-RL</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#skrl">SKRL</a></li>
@@ -747,6 +748,39 @@ for more details, and the <a class="reference internal" href="../../migration/mi
 guide for how to add Newton support to your own environments.</p>
 </div>
 <p>Newton does not require Isaac Sim (kit-less mode). See <a class="reference internal" href="../../setup/installation/index.html#kitless-installation"><span class="std std-ref">Kit-less Installation</span></a> for setup.</p>
+</section>
+<section id="observation-mode-presets">
+<h2>Observation-mode Presets<a class="headerlink" href="#observation-mode-presets" title="Link to this heading">#</a></h2>
+<p>Some environments support multiple observation modes — for example different camera
+modalities or combinations of state and image observations — selectable via the same
+<code class="docutils literal notranslate"><span class="pre">presets=</span></code> mechanism.  Unlike physics-backend presets, <strong>observation-mode presets
+affect the checkpoint structure</strong>, so you must pass the same preset to both the
+training script and the play/evaluation script.  Using a different preset (or none)
+at play time will cause a model-architecture mismatch when loading the checkpoint.</p>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">Isaac-Repose-Cube-Shadow-Vision-Direct-v0</span></code> defaults to RGB + depth
++ segmentation inputs but can be switched to RGB-only (fewer input channels, lighter
+model) with <code class="docutils literal notranslate"><span class="pre">presets=rgb</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Train with RGB-only observations</span>
+./isaaclab.sh<span class="w"> </span>-p<span class="w"> </span>scripts/reinforcement_learning/rsl_rl/train.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task<span class="w"> </span>Isaac-Repose-Cube-Shadow-Vision-Direct-v0<span class="w"> </span>--headless<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--enable_cameras<span class="w"> </span><span class="nv">presets</span><span class="o">=</span>rgb
+
+<span class="c1"># Play — must use the same preset to load the matching checkpoint</span>
+./isaaclab.sh<span class="w"> </span>-p<span class="w"> </span>scripts/reinforcement_learning/rsl_rl/play.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task<span class="w"> </span>Isaac-Repose-Cube-Shadow-Vision-Direct-Play-v0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--enable_cameras<span class="w"> </span><span class="nv">presets</span><span class="o">=</span>rgb
+</pre></div>
+</div>
+<p>Other available presets for this environment: <code class="docutils literal notranslate"><span class="pre">albedo</span></code>,
+<code class="docutils literal notranslate"><span class="pre">simple_shading_constant_diffuse</span></code>, <code class="docutils literal notranslate"><span class="pre">simple_shading_diffuse_mdl</span></code>,
+<code class="docutils literal notranslate"><span class="pre">simple_shading_full_mdl</span></code>.  The <code class="docutils literal notranslate"><span class="pre">depth</span></code> preset is intended for
+benchmarking only (see the environment’s config for details).</p>
+<p>Multiple presets can be combined with a comma when they do not conflict —
+for instance to switch both the physics backend and the camera modality:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">presets</span><span class="o">=</span>newton_renderer,rgb
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="../../features/hydra.html"><span class="doc">Hydra Configuration System</span></a> for the full preset system documentation.</p>
 </section>
 <section id="rl-games">
 <h2>RL-Games<a class="headerlink" href="#rl-games" title="Link to this heading">#</a></h2>
@@ -1160,6 +1194,7 @@ isaaclab.bat -p -m tensorboard.main --logdir=logs
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#newton-backend">Newton Backend</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-mode-presets">Observation-mode Presets</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rl-games">RL-Games</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rsl-rl">RSL-RL</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#skrl">SKRL</a></li>

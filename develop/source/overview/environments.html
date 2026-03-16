@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
     <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
-    <link rel="stylesheet" type="text/css" href="/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5774970f" />
@@ -49,7 +49,7 @@
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
     <script src="../../_static/twemoji.js"></script>
-    <script src="/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
@@ -936,11 +936,15 @@ controlled via Inverse Kinematics).</p></td>
 </tr>
 <tr class="row-odd"><td><p><img alt="kuka-allegro-lift" src="../../_images/kuka_allegro_lift.jpg" /></p></td>
 <td><p><a class="reference external" href="https://github.com/isaac-sim/IsaacLab/blob/main/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/config/kuka_allegro/dexsuite_kuka_allegro_env_cfg.py">Isaac-Dexsuite-Kuka-Allegro-Lift-v0</a></p></td>
-<td><p>Pick up a primitive shape on the table and lift it to target position</p></td>
+<td><p>Pick up a primitive shape on the table and lift it to target position.
+Supports state, single-camera, and dual-camera observation modes via
+<code class="docutils literal notranslate"><span class="pre">presets=single_camera</span></code> / <code class="docutils literal notranslate"><span class="pre">presets=duo_camera</span></code> (see RL table below).</p></td>
 </tr>
 <tr class="row-even"><td><p><img alt="kuka-allegro-reorient" src="../../_images/kuka_allegro_reorient.jpg" /></p></td>
 <td><p><a class="reference external" href="https://github.com/isaac-sim/IsaacLab/blob/main/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/config/kuka_allegro/dexsuite_kuka_allegro_env_cfg.py">Isaac-Dexsuite-Kuka-Allegro-Reorient-v0</a></p></td>
-<td><p>Pick up a primitive shape on the table and orient it to target pose</p></td>
+<td><p>Pick up a primitive shape on the table and orient it to target pose.
+Supports state, single-camera, and dual-camera observation modes via
+<code class="docutils literal notranslate"><span class="pre">presets=single_camera</span></code> / <code class="docutils literal notranslate"><span class="pre">presets=duo_camera</span></code> (see RL table below).</p></td>
 </tr>
 <tr class="row-odd"><td><p><img alt="galbot_stack" src="../../_images/galbot_stack_cube.jpg" /></p></td>
 <td><p><a class="reference external" href="https://github.com/isaac-sim/IsaacLab/blob/main/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack/config/galbot/stack_rmp_rel_env_cfg.py">Isaac-Stack-Cube-Galbot-Left-Arm-Gripper-RmpFlow-v0</a></p></td>
@@ -1868,12 +1872,31 @@ inferencing, including reading from an already trained checkpoint and disabling 
 <td><p>Manager Based</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p>Isaac-Dexsuite-Kuka-Allegro-Lift-v0</p></td>
+<tr class="row-even"><td><p>Isaac-Dexsuite-Kuka-Allegro-Lift-v0</p>
+<p>Camera variants (requires <code class="docutils literal notranslate"><span class="pre">--enable_cameras</span></code>):</p>
+<ul class="simple">
+<li><p>single-camera: append <code class="docutils literal notranslate"><span class="pre">presets=single_camera,isaacsim_rtx_renderer</span></code></p></li>
+<li><p>dual-camera: append <code class="docutils literal notranslate"><span class="pre">presets=duo_camera,isaacsim_rtx_renderer</span></code></p></li>
+</ul>
+<p>The same <code class="docutils literal notranslate"><span class="pre">presets=</span></code> flags must be passed to both the training and
+play scripts.  There is no separately registered
+<code class="docutils literal notranslate"><span class="pre">Isaac-Dexsuite-Kuka-Allegro-Lift-Single-Camera-v0</span></code> environment;
+all observation-mode variants share the base task name and are
+selected via the preset system.</p>
+</td>
 <td><p>Isaac-Dexsuite-Kuka-Allegro-Lift-Play-v0</p></td>
 <td><p>Manager Based</p></td>
 <td><p><strong>rl_games</strong> (PPO), <strong>rsl_rl</strong> (PPO)</p></td>
 </tr>
-<tr class="row-odd"><td><p>Isaac-Dexsuite-Kuka-Allegro-Reorient-v0</p></td>
+<tr class="row-odd"><td><p>Isaac-Dexsuite-Kuka-Allegro-Reorient-v0</p>
+<p>Camera variants (requires <code class="docutils literal notranslate"><span class="pre">--enable_cameras</span></code>):</p>
+<ul class="simple">
+<li><p>single-camera: append <code class="docutils literal notranslate"><span class="pre">presets=single_camera,isaacsim_rtx_renderer</span></code></p></li>
+<li><p>dual-camera: append <code class="docutils literal notranslate"><span class="pre">presets=duo_camera,isaacsim_rtx_renderer</span></code></p></li>
+</ul>
+<p>The same <code class="docutils literal notranslate"><span class="pre">presets=</span></code> flags must be passed to both the training and
+play scripts.</p>
+</td>
 <td><p>Isaac-Dexsuite-Kuka-Allegro-Reorient-Play-v0</p></td>
 <td><p>Manager Based</p></td>
 <td><p><strong>rl_games</strong> (PPO), <strong>rsl_rl</strong> (PPO)</p></td>
