@@ -1400,10 +1400,14 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">body_incoming_joint_wrench_b</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">wp</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Joint reaction wrench applied from body parent to child body in parent body frame.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Joint reaction wrench applied to each body through its incoming joint, expressed in that body&#39;s frame.</span>
 
 <span class="sd">        Shape is (num_instances, num_bodies, 6). All body reaction wrenches are provided including the root body to the</span>
 <span class="sd">        world of an articulation.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            PhysX expresses this wrench in the frame of ``body1`` as defined in the USD joint, which corresponds to</span>
+<span class="sd">            the child body&#39;s own frame when the USD convention is ``body0`` = parent, ``body1`` = child.</span>
 
 <span class="sd">        For more information on joint wrenches, please check the `PhysX documentation`_ and the underlying</span>
 <span class="sd">        `PhysX Tensor API`_.</span>

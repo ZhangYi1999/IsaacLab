@@ -4680,7 +4680,7 @@ is the total number of thrusters per multirotor.</p>
 <td><p>Body center of mass velocity <code class="docutils literal notranslate"><span class="pre">[lin_vel,</span> <span class="pre">ang_vel]</span></code> in simulation world frame.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#isaaclab_contrib.assets.MultirotorData.body_incoming_joint_wrench_b" title="isaaclab_contrib.assets.MultirotorData.body_incoming_joint_wrench_b"><code class="xref py py-obj docutils literal notranslate"><span class="pre">body_incoming_joint_wrench_b</span></code></a></p></td>
-<td><p>Joint reaction wrench applied from body parent to child body in parent body frame.</p></td>
+<td><p>Joint reaction wrench applied to each body through its incoming joint, expressed in that body's frame.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#isaaclab_contrib.assets.MultirotorData.body_inertia" title="isaaclab_contrib.assets.MultirotorData.body_inertia"><code class="xref py py-obj docutils literal notranslate"><span class="pre">body_inertia</span></code></a></p></td>
 <td><p>Flattened body inertia in the world frame.</p></td>
@@ -5230,9 +5230,14 @@ relative to the world.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="isaaclab_contrib.assets.MultirotorData.body_incoming_joint_wrench_b">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">body_incoming_joint_wrench_b</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://nvidia.github.io/warp/api_reference/_generated/warp.array.html#warp.array" title="(in Warp v1.12.0)"><span class="pre">warp.array</span></a></em><a class="headerlink" href="#isaaclab_contrib.assets.MultirotorData.body_incoming_joint_wrench_b" title="Link to this definition">#</a></dt>
-<dd><p>Joint reaction wrench applied from body parent to child body in parent body frame.</p>
+<dd><p>Joint reaction wrench applied to each body through its incoming joint, expressed in that body’s frame.</p>
 <p>Shape is (num_instances, num_bodies, 6). All body reaction wrenches are provided including the root body to the
 world of an articulation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>PhysX expresses this wrench in the frame of <code class="docutils literal notranslate"><span class="pre">body1</span></code> as defined in the USD joint, which corresponds to
+the child body’s own frame when the USD convention is <code class="docutils literal notranslate"><span class="pre">body0</span></code> = parent, <code class="docutils literal notranslate"><span class="pre">body1</span></code> = child.</p>
+</div>
 <p>For more information on joint wrenches, please check the <a class="reference external" href="https://nvidia-omniverse.github.io/PhysX/physx/5.5.1/docs/Articulations.html#link-incoming-joint-force">PhysX documentation</a> and the underlying
 <a class="reference external" href="https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/extensions/runtime/source/omni.physics.tensors/docs/api/python.html#omni.physics.tensors.impl.api.ArticulationView.get_link_incoming_joint_force">PhysX Tensor API</a>.</p>
 </dd></dl>
