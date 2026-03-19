@@ -60,7 +60,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="3.0.0" />
-    <meta name="docbuild:last-update" content="Mar 18, 2026"/>
+    <meta name="docbuild:last-update" content="Mar 19, 2026"/>
   </head>
   
   
@@ -654,13 +654,18 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.command_handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">CommandHandler</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.isaac_teleop_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="n">IsaacTeleopCfg</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.session_lifecycle</span><span class="w"> </span><span class="kn">import</span> <span class="n">TeleopSessionLifecycle</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.xr_anchor_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">XrAnchorManager</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.session_lifecycle</span><span class="w"> </span><span class="kn">import</span> <span class="n">SupportsDLPack</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -689,6 +694,24 @@
 <span class="sd">    The device uses IsaacTeleop&#39;s TensorReorderer to flatten pipeline outputs</span>
 <span class="sd">    into a single action tensor matching the environment&#39;s action space.</span>
 
+<span class="sd">    Frame rebasing:</span>
+<span class="sd">        By default, all output poses are expressed in the simulation world</span>
+<span class="sd">        frame.  When an application needs poses in a different frame (e.g.</span>
+<span class="sd">        robot base link for IK), there are two options:</span>
+
+<span class="sd">        * **Config-driven** (recommended): set</span>
+<span class="sd">          :attr:`~IsaacTeleopCfg.target_frame_prim_path` to the USD prim</span>
+<span class="sd">          whose frame the output should be expressed in.  The device reads</span>
+<span class="sd">          the prim&#39;s world transform each frame and applies the rebase</span>
+<span class="sd">          automatically.</span>
+<span class="sd">        * **Explicit**: pass a ``target_T_world`` matrix directly to</span>
+<span class="sd">          :meth:`advance`.</span>
+
+<span class="sd">        In both cases the device composes</span>
+<span class="sd">        ``target_T_world @ world_T_anchor`` before feeding the matrix into</span>
+<span class="sd">        the retargeting pipeline, so all resulting poses are expressed in the</span>
+<span class="sd">        target frame.</span>
+
 <span class="sd">    Teleop commands:</span>
 <span class="sd">        The device supports callbacks for START, STOP, and RESET commands</span>
 <span class="sd">        that can be triggered via XR controller buttons or the message bus.</span>
@@ -701,9 +724,24 @@
 <span class="sd">                sim_device=&quot;cuda:0&quot;,</span>
 <span class="sd">            )</span>
 
+<span class="sd">            # Poses in world frame (default)</span>
 <span class="sd">            with IsaacTeleopDevice(cfg) as device:</span>
 <span class="sd">                while running:</span>
 <span class="sd">                    action = device.advance()</span>
+<span class="sd">                    env.step(action.repeat(num_envs, 1))</span>
+
+<span class="sd">            # Config-driven rebase into robot base frame</span>
+<span class="sd">            cfg.target_frame_prim_path = &quot;/World/Robot/base_link&quot;</span>
+<span class="sd">            with IsaacTeleopDevice(cfg) as device:</span>
+<span class="sd">                while running:</span>
+<span class="sd">                    action = device.advance()</span>
+<span class="sd">                    env.step(action.repeat(num_envs, 1))</span>
+
+<span class="sd">            # Explicit rebase into robot base frame</span>
+<span class="sd">            with IsaacTeleopDevice(cfg) as device:</span>
+<span class="sd">                while running:</span>
+<span class="sd">                    robot_T_world = get_robot_base_transform()</span>
+<span class="sd">                    action = device.advance(target_T_world=robot_T_world)</span>
 <span class="sd">                    env.step(action.repeat(num_envs, 1))</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -805,13 +843,34 @@
 
 <div class="viewcode-block" id="IsaacTeleopDevice.advance">
 <a class="viewcode-back" href="../../source/api/lab_teleop/isaaclab_teleop.html#isaaclab_teleop.IsaacTeleopDevice.advance">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_T_world</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="n">SupportsDLPack</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Process current device state and return control commands.</span>
 
 <span class="sd">        If the IsaacTeleop session has not been started yet (because the OpenXR</span>
 <span class="sd">        handles were not available at ``__enter__`` time), this method will</span>
 <span class="sd">        attempt to start it on each call.  Once the user clicks &quot;Start AR&quot; and</span>
 <span class="sd">        the handles become available, the session is created transparently.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target_T_world: Optional 4x4 transform matrix that rebases all</span>
+<span class="sd">                output poses into an arbitrary target coordinate frame.  When</span>
+<span class="sd">                provided, the matrix sent to the retargeting pipeline becomes</span>
+<span class="sd">                ``target_T_world @ world_T_anchor`` instead of just</span>
+<span class="sd">                ``world_T_anchor``, so all resulting poses are expressed in</span>
+<span class="sd">                the target frame rather than the simulation world frame.</span>
+
+<span class="sd">                Typical use case: pass ``robot_base_T_world`` so that an IK</span>
+<span class="sd">                controller receives end-effector poses in the robot&#39;s base</span>
+<span class="sd">                link frame.</span>
+
+<span class="sd">                Accepts any object supporting the DLPack buffer protocol</span>
+<span class="sd">                (``__dlpack__``), including :class:`numpy.ndarray`,</span>
+<span class="sd">                :class:`torch.Tensor`, and ``wp.array``.</span>
+
+<span class="sd">                When ``None`` and</span>
+<span class="sd">                :attr:`~IsaacTeleopCfg.target_frame_prim_path` is set, the</span>
+<span class="sd">                transform is computed automatically by reading the prim&#39;s</span>
+<span class="sd">                world matrix from Fabric and inverting it.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            A flattened action :class:`torch.Tensor` ready for the Isaac Lab</span>
@@ -821,9 +880,14 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            RuntimeError: If called outside of a context manager.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Auto-compute target_T_world from config if not explicitly provided</span>
+        <span class="k">if</span> <span class="n">target_T_world</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="o">.</span><span class="n">target_frame_prim_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">target_T_world</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_target_frame_T_world</span><span class="p">()</span>
+
         <span class="c1"># Step the session (handles lazy start and action extraction)</span>
         <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session_lifecycle</span><span class="o">.</span><span class="n">step</span><span class="p">(</span>
             <span class="n">anchor_world_matrix_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_anchor_manager</span><span class="o">.</span><span class="n">get_world_matrix</span><span class="p">,</span>
+            <span class="n">target_T_world</span><span class="o">=</span><span class="n">target_T_world</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">action</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -832,6 +896,75 @@
 
         <span class="k">return</span> <span class="n">action</span></div>
 
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># Target frame transform (config-driven rebase)</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_target_frame_T_world</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read the target-frame prim&#39;s world matrix from Fabric and return its inverse.</span>
+
+<span class="sd">        Uses USDRT to read the prim&#39;s hierarchical world matrix, matching the</span>
+<span class="sd">        pattern used by :class:`XrAnchorSynchronizer` for anchor prim reads.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A (4, 4) float32 :class:`numpy.ndarray` representing the inverse</span>
+<span class="sd">            of the prim&#39;s world transform (i.e. ``target_T_world``), or</span>
+<span class="sd">            ``None`` if the prim cannot be read.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">omni.usd</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">usdrt</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pxr</span><span class="w"> </span><span class="kn">import</span> <span class="n">UsdUtils</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">usdrt</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rt</span>
+
+            <span class="n">stage</span> <span class="o">=</span> <span class="n">omni</span><span class="o">.</span><span class="n">usd</span><span class="o">.</span><span class="n">get_context</span><span class="p">()</span><span class="o">.</span><span class="n">get_stage</span><span class="p">()</span>
+            <span class="n">stage_cache</span> <span class="o">=</span> <span class="n">UsdUtils</span><span class="o">.</span><span class="n">StageCache</span><span class="o">.</span><span class="n">Get</span><span class="p">()</span>
+            <span class="n">stage_id</span> <span class="o">=</span> <span class="n">stage_cache</span><span class="o">.</span><span class="n">GetId</span><span class="p">(</span><span class="n">stage</span><span class="p">)</span><span class="o">.</span><span class="n">ToLongInt</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">stage_id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">stage_id</span> <span class="o">=</span> <span class="n">stage_cache</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="n">stage</span><span class="p">)</span><span class="o">.</span><span class="n">ToLongInt</span><span class="p">()</span>
+            <span class="n">rt_stage</span> <span class="o">=</span> <span class="n">usdrt</span><span class="o">.</span><span class="n">Usd</span><span class="o">.</span><span class="n">Stage</span><span class="o">.</span><span class="n">Attach</span><span class="p">(</span><span class="n">stage_id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rt_stage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">rt_prim</span> <span class="o">=</span> <span class="n">rt_stage</span><span class="o">.</span><span class="n">GetPrimAtPath</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="o">.</span><span class="n">target_frame_prim_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rt_prim</span><span class="o">.</span><span class="n">IsValid</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">rt_xformable</span> <span class="o">=</span> <span class="n">Rt</span><span class="o">.</span><span class="n">Xformable</span><span class="p">(</span><span class="n">rt_prim</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rt_xformable</span><span class="o">.</span><span class="n">GetPrim</span><span class="p">()</span><span class="o">.</span><span class="n">IsValid</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">world_matrix_attr</span> <span class="o">=</span> <span class="n">rt_xformable</span><span class="o">.</span><span class="n">GetFabricHierarchyWorldMatrixAttr</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">world_matrix_attr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">rt_matrix</span> <span class="o">=</span> <span class="n">world_matrix_attr</span><span class="o">.</span><span class="n">Get</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">rt_matrix</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">rt_matrix</span><span class="o">.</span><span class="n">ExtractTranslation</span><span class="p">()</span>
+            <span class="n">rt_quat</span> <span class="o">=</span> <span class="n">rt_matrix</span><span class="o">.</span><span class="n">ExtractRotationQuat</span><span class="p">()</span>
+
+            <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.transform</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rotation</span>
+
+            <span class="n">quat_xyzw</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">rt_quat</span><span class="o">.</span><span class="n">GetImaginary</span><span class="p">()[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">rt_quat</span><span class="o">.</span><span class="n">GetImaginary</span><span class="p">()[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">rt_quat</span><span class="o">.</span><span class="n">GetImaginary</span><span class="p">()[</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">rt_quat</span><span class="o">.</span><span class="n">GetReal</span><span class="p">()),</span>
+            <span class="p">]</span>
+
+            <span class="n">R</span> <span class="o">=</span> <span class="n">Rotation</span><span class="o">.</span><span class="n">from_quat</span><span class="p">(</span><span class="n">quat_xyzw</span><span class="p">)</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="mi">2</span><span class="p">])],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+            <span class="n">inv_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">inv_mat</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">inv_mat</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">t</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">inv_mat</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to read target frame prim &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="o">.</span><span class="n">target_frame_prim_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Controller button polling (glue between session and anchor manager)</span>
@@ -966,7 +1099,7 @@ By The Isaac Lab Project Developers.
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 18, 2026.
+  Last updated on Mar 19, 2026.
   <br/>
 </p>
   </div>

@@ -60,7 +60,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="3.0.0" />
-    <meta name="docbuild:last-update" content="Mar 18, 2026"/>
+    <meta name="docbuild:last-update" content="Mar 19, 2026"/>
   </head>
   
   
@@ -755,6 +755,27 @@
 <span class="sd">    If ``None``, the tuning UI will not be opened.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">target_frame_prim_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Optional USD prim path whose world frame becomes the target coordinate</span>
+<span class="sd">    frame for all output poses.</span>
+
+<span class="sd">    When set, the device automatically reads this prim&#39;s world transform each</span>
+<span class="sd">    frame and uses its inverse as the ``target_T_world`` rebase matrix in</span>
+<span class="sd">    :meth:`~isaaclab_teleop.IsaacTeleopDevice.advance`.  An explicit</span>
+<span class="sd">    ``target_T_world`` argument to :meth:`~isaaclab_teleop.IsaacTeleopDevice.advance`</span>
+<span class="sd">    takes precedence over this config.</span>
+
+<span class="sd">    Typical usage: set to the robot base link prim path so that an IK</span>
+<span class="sd">    controller receives end-effector poses in the robot&#39;s base frame.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        IsaacTeleopCfg(</span>
+<span class="sd">            target_frame_prim_path=&quot;/World/envs/env_0/Robot/base_link&quot;,</span>
+<span class="sd">            ...</span>
+<span class="sd">        )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;IsaacLabTeleop&quot;</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Application name for the IsaacTeleop session.&quot;&quot;&quot;</span></div>
 
@@ -805,7 +826,7 @@ By The Isaac Lab Project Developers.
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 18, 2026.
+  Last updated on Mar 19, 2026.
   <br/>
 </p>
   </div>
