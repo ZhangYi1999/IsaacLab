@@ -11,10 +11,24 @@ import json
 from collections.abc import Iterable, Mapping, Sized
 from typing import Any
 
-import torch
-
-from .array import TENSOR_TYPE_CONVERSIONS, TENSOR_TYPES
 from .string import ResolvableString, callable_to_string, string_to_slice
+
+
+def _is_torch_tensor(obj: object) -> bool:
+    """Check if *obj* is a ``torch.Tensor`` without importing torch at module level."""
+    try:
+        import torch  # noqa: F811
+    except ModuleNotFoundError:
+        return False
+    return isinstance(obj, torch.Tensor)
+
+
+def _get_array_constants():
+    """Lazily import TENSOR_TYPE_CONVERSIONS and TENSOR_TYPES from .array."""
+    from .array import TENSOR_TYPE_CONVERSIONS, TENSOR_TYPES
+
+    return TENSOR_TYPE_CONVERSIONS, TENSOR_TYPES
+
 
 """
 Dictionary <-> Class operations.
@@ -42,7 +56,7 @@ def class_to_dict(obj: object) -> dict[str, Any]:
     # convert object to dictionary
     if isinstance(obj, dict):
         obj_dict = obj
-    elif isinstance(obj, torch.Tensor):
+    elif _is_torch_tensor(obj):
         # We have to treat torch tensors specially because `torch.tensor.__dict__` returns an empty
         # dict, which would mean that a torch.tensor would be stored as an empty dict. Instead we
         # want to store it directly as the tensor.
@@ -237,23 +251,26 @@ def convert_dict_to_backend(
         The updated dict with the data converted to the desired backend.
     """
     # THINK: Should we also support converting to a specific device, e.g. "cuda:0"?
+    # Lazy-load array backend constants so that this module can be imported without torch/warp.
+    _TENSOR_TYPE_CONVERSIONS, _TENSOR_TYPES = _get_array_constants()
+
     # Check the backend is valid.
-    if backend not in TENSOR_TYPE_CONVERSIONS:
+    if backend not in _TENSOR_TYPE_CONVERSIONS:
         raise ValueError(f"Unknown backend '{backend}'. Supported backends are 'numpy', 'torch', and 'warp'.")
     # Define the conversion functions for each backend.
-    tensor_type_conversions = TENSOR_TYPE_CONVERSIONS[backend]
+    tensor_type_conversions = _TENSOR_TYPE_CONVERSIONS[backend]
 
     # Parse the array types and convert them to the corresponding types: "numpy" -> np.ndarray, etc.
     parsed_types = list()
     for t in array_types:
         # Check type is valid.
-        if t not in TENSOR_TYPES:
+        if t not in _TENSOR_TYPES:
             raise ValueError(f"Unknown array type: '{t}'. Supported array types are 'numpy', 'torch', and 'warp'.")
         # Exclude types that match the backend, since we do not need to convert these.
         if t == backend:
             continue
         # Convert the string types to the corresponding types.
-        parsed_types.append(TENSOR_TYPES[t])
+        parsed_types.append(_TENSOR_TYPES[t])
 
     # Convert the data to the desired backend.
     output_dict = dict()
