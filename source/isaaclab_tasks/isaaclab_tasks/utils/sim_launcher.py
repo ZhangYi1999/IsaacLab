@@ -149,17 +149,6 @@ def compute_kit_requirements(
     return needs_kit, has_kit_cameras, visualizer_types
 
 
-def is_simulation_app_running() -> bool:
-    """Checks if the simulation app is running."""
-    try:
-        import omni.kit.app
-
-        app = omni.kit.app.get_app()
-        return app is not None and app.is_running()
-    except Exception:
-        return False
-
-
 @contextmanager
 def launch_simulation(
     env_cfg,
@@ -214,7 +203,9 @@ def launch_simulation(
             raise SystemExit(1)
 
         # If the simulation app is not launched, we launch it.
-        if not is_simulation_app_running():
+        from isaaclab.utils import has_kit
+
+        if not has_kit():
             from isaaclab.app import AppLauncher
 
             app_launcher = AppLauncher(launcher_args)
