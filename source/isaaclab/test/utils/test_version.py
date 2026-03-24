@@ -3,23 +3,30 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Tests for version comparison utilities."""
+"""Tests for version comparison utilities.
 
-"""Launch Isaac Sim Simulator first."""
-
-from isaaclab.app import AppLauncher
-
-# launch omniverse app
-simulation_app = AppLauncher(headless=True).app
-
-"""Rest everything follows."""
+The ``compare_versions`` tests are pure-Python and run everywhere.
+The ``get_isaac_sim_version`` tests require Isaac Sim to be installed and are
+skipped when the package is not available.
+"""
 
 import pytest
 from packaging.version import Version
 
-from isaaclab.utils.version import compare_versions, get_isaac_sim_version
+from isaaclab.utils.version import compare_versions
+
+# Guard: get_isaac_sim_version lazily imports isaacsim.core.version at call time.
+try:
+    from isaaclab.utils.version import get_isaac_sim_version
+
+    _has_isaacsim = True
+except ImportError:
+    _has_isaacsim = False
+
+_requires_isaacsim = pytest.mark.skipif(not _has_isaacsim, reason="Isaac Sim is not installed")
 
 
+@_requires_isaacsim
 def test_get_isaac_sim_version():
     """Test that get_isaac_sim_version returns cached Version object."""
     # Call twice to ensure caching works
@@ -40,6 +47,7 @@ def test_get_isaac_sim_version():
     assert version1.micro >= 0
 
 
+@_requires_isaacsim
 def test_get_isaac_sim_version_format():
     """Test that get_isaac_sim_version returns correct format."""
     isaac_version = get_isaac_sim_version()
@@ -58,6 +66,7 @@ def test_get_isaac_sim_version_format():
     assert hasattr(isaac_version, "micro")
 
 
+@_requires_isaacsim
 def test_version_caching_performance():
     """Test that caching improves performance for version checks."""
     # First call (will cache)
@@ -70,6 +79,7 @@ def test_version_caching_performance():
         assert version is version1  # Should be the exact same object
 
 
+@_requires_isaacsim
 def test_version_comparison_operators():
     """Test that Version objects support natural comparisons."""
     isaac_version = get_isaac_sim_version()

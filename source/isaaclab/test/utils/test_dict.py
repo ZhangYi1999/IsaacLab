@@ -3,16 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# NOTE: While we don't actually use the simulation app in this test, we still need to launch it
-#       because warp is only available in the context of a running simulation
-"""Launch Isaac Sim Simulator first."""
+"""Tests for dictionary utility functions.
 
-from isaaclab.app import AppLauncher
-
-# launch omniverse app
-simulation_app = AppLauncher(headless=True).app
-
-"""Rest everything follows."""
+These tests are pure-Python and do not require Isaac Sim or a GPU.
+"""
 
 import random
 

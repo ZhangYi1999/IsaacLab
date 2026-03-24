@@ -6,16 +6,12 @@
 # ignore private usage of variables warning
 # pyright: reportPrivateUsage=none
 
+"""Tests for space utility functions.
+
+These tests require torch but do not require Isaac Sim or a GPU.
+"""
+
 from __future__ import annotations
-
-"""Launch Isaac Sim Simulator first."""
-
-from isaaclab.app import AppLauncher
-
-# launch omniverse app
-simulation_app = AppLauncher(headless=True).app
-
-"""Rest everything follows."""
 
 import numpy as np
 import torch

@@ -3,16 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Tests for logging utilities."""
+"""Tests for logging utilities.
 
-"""Launch Isaac Sim Simulator first."""
-
-from isaaclab.app import AppLauncher
-
-# launch omniverse app
-simulation_app = AppLauncher(headless=True).app
-
-"""Rest everything follows."""
+These tests are pure-Python and do not require Isaac Sim or a GPU.
+"""
 
 import logging
 import os
