@@ -1,0 +1,99 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Fast CI job that runs pure-Python tests without Isaac Sim or a GPU.
+# These tests cover utility functions, configclass, logging, string ops,
+# CLI helpers, and other logic that doesn't touch the simulation runtime.
+# Runs on a standard ubuntu runner for fast feedback (~2 minutes).
+
+name: Lightweight Tests (no GPU)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'source/isaaclab/**'
+      - '.github/workflows/lightweight-tests.yml'
+    branches:
+      - main
+      - develop
+      - 'release/**'
+
+concurrency:
+  group: lightweight-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lightweight-tests:
+    name: Pure-Python Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install minimal dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install only what the pure-Python tests need — no torch, no warp, no sim.
+        pip install \
+          pytest \
+          pytest-mock \
+          packaging \
+          toml \
+          prettytable==3.3.0 \
+          pyyaml \
+          gymnasium==1.2.1 \
+          numpy \
+          lazy_loader \
+          flatdict==4.0.0
+
+        # Install isaaclab in editable mode but skip heavy deps.
+        # We only need the pure-Python modules (utils, cli, envs.utils).
+        pip install --no-deps -e source/isaaclab
+
+    - name: Create reports directory
+      run: mkdir -p reports
+
+    - name: Run pure-Python utility tests
+      run: |
+        # Only run tests that are genuinely pure-Python:
+        # - No warp, no torch, no Isaac Sim imports
+        # - Excludes test_timer.py (imports warp)
+        # - Excludes test_assets.py (requires Nucleus connectivity)
+        # - Excludes test_recorders.py (asserts torch is present)
+        # - test_version.py Isaac Sim tests are skipped via @skipif markers
+        python -m pytest \
+          source/isaaclab/test/utils/test_string.py \
+          source/isaaclab/test/utils/test_dict.py \
+          source/isaaclab/test/utils/test_configclass.py \
+          source/isaaclab/test/utils/test_logger.py \
+          source/isaaclab/test/utils/test_version.py \
+          source/isaaclab/test/envs/test_null_command_term.py \
+          source/isaaclab/test/cli/ \
+          source/isaaclab/test/benchmark/test_benchmark_core.py \
+          source/isaaclab/test/renderers/test_renderer_factory.py \
+          source/isaaclab/test/visualizers/test_visualizer.py \
+          -v --tb=short \
+          --junitxml=reports/lightweight-tests-report.xml
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: lightweight-test-results
+        path: reports/lightweight-tests-report.xml
+        retention-days: 7
