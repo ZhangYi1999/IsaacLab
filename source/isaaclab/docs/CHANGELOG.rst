@@ -1,6 +1,18 @@
 Changelog
 ---------
 
+0.54.4 (2026-03-24)
+~~~~~~~~~~~~~~~~~~~
+
+Fixed
+^^^^^
+
+* Fixed :func:`~isaaclab.utils.string.is_lambda_expression` calling
+  ``ast.parse()`` three times per invocation instead of once, eliminating
+  redundant work on every configclass deserialization that checks for
+  lambda expressions.
+
+
 0.54.3 (2026-02-04)
 ~~~~~~~~~~~~~~~~~~~
 
